@@ -1,25 +1,34 @@
-import { formatISO9075 } from "date-fns";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { Link } from "react-router-dom";
 
-export default function Post({ _id, title, summary, cover, content, createdAt, author }) {
-  // Verifica se o autor é um objeto e se possui a propriedade username
-  const authorName = author && typeof author === 'object' && author.username ? author.username : 'Autor Desconhecido';
+export default function Post({ id, title, summary, cover, content, createdAt, authorEmail }) {
+  // Converta createdAt para uma data JavaScript, se for um timestamp do Firestore
+  const createdAtDate = createdAt && createdAt._seconds
+    ? new Date(createdAt._seconds * 1000)
+    : null;
+
+  // Formate a data ou defina como "Data indisponível" caso não seja válida
+  const formattedDate = createdAtDate 
+    ? format(createdAtDate, "dd 'de' MMM 'de' yyyy 'às' HH:mm", { locale: ptBR })
+    : "Data indisponível";
 
   return (
     <div className="post">
       <div className="image">
-        <Link to={`/post/${_id}`}>
-          {/* Verifica se a 'cover' está disponível */}
-          <img src={cover ? `http://localhost:4000/${cover}` : 'default-image-path.jpg'} alt={title} />
+        <Link to={`/post/${id}`}>
+          <img src={`http://localhost:4000/${cover}`} alt={title} />
         </Link>
       </div>
       <div className="texts">
-        <Link to={`/post/${_id}`}>
+        <Link to={`/post/${id}`}>
           <h2>{title}</h2>
         </Link>
         <p className="info">
-          <a className="author">{authorName}</a>
-          <time>{formatISO9075(new Date(createdAt))}</time>
+          <span className="author">Por: {authorEmail || "Autor desconhecido"}</span>
+        </p>
+        <p className="date">
+          <time>{formattedDate}</time>
         </p>
         <p className="summary">{summary}</p>
       </div>

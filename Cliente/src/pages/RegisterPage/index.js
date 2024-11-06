@@ -1,16 +1,18 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
+  const navigate = useNavigate(); // Hook para navegação
+  
   async function register(ev) {
     ev.preventDefault();
-
-    // Validação da senha
+    
+    // Verifique se a senha possui pelo menos 6 caracteres
     if (password.length < 6) {
-      alert('A senha deve ter pelo menos 6 caracteres.');
-      return; // Não prossegue se a validação falhar
+      alert('A senha deve ter no mínimo 6 caracteres.');
+      return;
     }
 
     const response = await fetch('http://localhost:4000/register', {
@@ -19,13 +21,14 @@ export default function RegisterPage() {
       headers: { 'Content-Type': 'application/json' },
     });
     
-    if (response.status === 200) {
-      alert('Registration successful');
+    if (response.ok) {
+      alert('Usuário registrado!');
+      navigate('/login'); // Redireciona para a página de login
     } else {
-      alert('Registration failed');
+      alert('Falha no registro');
     }
   }
-
+  
   return (
     <form className="register" onSubmit={register}>
       <h1>Register</h1>
@@ -37,11 +40,11 @@ export default function RegisterPage() {
       />
       <input
         type="password"
-        placeholder="Password"
+        placeholder="Senha"
         value={password}
         onChange={ev => setPassword(ev.target.value)}
       />
-      <button type="submit">Register</button>
+      <button>Register</button>
     </form>
   );
 }

@@ -6,6 +6,7 @@ a{
 }
 body{
     color: #222;
+    background-color: #f6f6f6;
 }
 img{
     max-width: 100%;
@@ -160,7 +161,7 @@ a svg{
     align-items: center;
     height: 100vh;
     padding: 0 20%;
-    background-color: #faf0f0;
+    background-color: #f6f6f6;
 }
 
 .error-message {
@@ -174,4 +175,13 @@ a svg{
     border-radius: 8px;
     background-color: white;
     text-align: center;
+}
+
+.post .info {
+    margin-bottom: 4px; /* Ajuste conforme necessário */
+}
+  
+.post .date {
+    color: gray;
+    font-size: 0.9em; /* Ajuste de estilo para diferenciar da linha do autor */
 }

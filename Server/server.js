@@ -1,230 +1,254 @@
 const express = require('express');
 const cors = require('cors');
-const firebaseAdmin = require('firebase-admin');
-const { initializeApp } = require('firebase/app');
-const { getFirestore, Timestamp } = require('firebase/firestore');
-const { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } = require('firebase/auth');
+const morgan = require('morgan');
+const jwt = require('jsonwebtoken');
 const cookieParser = require('cookie-parser');
 const multer = require('multer');
 const uploadMiddleware = multer({ dest: 'uploads/' });
 const fs = require('fs');
+const admin = require('firebase-admin');
+const { getAuth } = require('firebase-admin/auth');
 
-// Configurações do Firebase
-const firebaseConfig = {
-    apiKey: "AIzaSyCdr0nswlx0jaPXEc3UYouYCC0DaxhikfM",
-    authDomain: "blog-4a.firebaseapp.com",
-    projectId: "blog-4a",
-    storageBucket: "blog-4a.firebasestorage.app",
-    messagingSenderId: "1035052042035",
-    appId: "1:1035052042035:web:e66f289d4bffc0eef6a046"
-};
-
+// Inicializa o Express
 const app = express();
-initializeApp(firebaseConfig);
-firebaseAdmin.initializeApp({
-    credential: firebaseAdmin.credential.applicationDefault(),
+
+// Inicializa o Firebase Admin SDK
+const serviceAccount = require('./json/blog-notinhas-7c131-firebase-adminsdk-8pbxo-b3f9288745.json');
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    storageBucket: "blog-notinhas-7c131.firebasestorage.app"
 });
-const db = getFirestore();
-const auth = getAuth();
 
-console.log("Conectado ao Firestore");
+const db = admin.firestore();
+const auth = admin.auth();
 
-// Middleware e configurações
+// Verifica a conexão com o Firestore
+db.collection('posts').limit(1).get()
+    .then(() => {
+        console.log("Firebase conectado com sucesso.");
+    })
+    .catch((error) => {
+        console.error("Erro ao conectar ao Firebase:", error);
+    });
+
+const secret = 'asdfe45we45w345wegw345werjktjwertkj';
+
+// Permitir o CORS para o frontend
 app.use(cors({ credentials: true, origin: 'http://localhost:3000' }));
 app.use(express.json());
 app.use(cookieParser());
 app.use('/uploads', express.static(__dirname + '/uploads'));
 
-// Registro de Usuário
+// Middleware para log das requisições
+app.use(morgan('dev'));
+
+// Função para verificar e decodificar o token JWT
+function verifyToken(req, res, next) {
+    const token = req.cookies.token;
+    if (!token) {
+        return res.status(401).json({ error: "Token não fornecido" });
+    }
+
+    jwt.verify(token, secret, (err, decoded) => {
+        if (err) {
+            return res.status(401).json({ error: "Token inválido" });
+        }
+        req.user = decoded; // Salva os dados do usuário
+        next();
+    });
+}
+
+// Endpoint de registro de usuário
 app.post('/register', async (req, res) => {
-    console.log("Requisição para registro de usuário recebida");
     const { email, password } = req.body;
     try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        console.log(`Usuário registrado com email: ${email}`);
-        res.json({ id: userCredential.user.uid, email: userCredential.user.email });
+        const userRecord = await auth.createUser({
+            email,
+            password
+        });
+        res.json({ id: userRecord.uid, email: userRecord.email });
     } catch (error) {
-        console.error("Erro no registro de usuário:", error.message);
-        res.status(400).json(error.message);
+        console.error("Erro ao registrar usuário:", error);
+        res.status(400).json(error);
     }
 });
 
-// Login de Usuário
+// Endpoint de login
 app.post('/login', async (req, res) => {
-    console.log("Requisição de login recebida");
-    const { email, password } = req.body;
+    const token = req.headers.authorization?.split(' ')[1]; // Extrai o token do cabeçalho
+
+    if (!token) {
+        return res.status(401).json({ error: "Token não fornecido" });
+    }
+
     try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const token = await userCredential.user.getIdToken();
-        console.log(`Usuário logado com email: ${email}`);
-        res.cookie('token', token).json({ id: userCredential.user.uid, email });
+        // Verifica o token JWT usando o Firebase Admin SDK
+        const decodedToken = await admin.auth().verifyIdToken(token);
+        
+        const { uid, email } = decodedToken;
+
+        // Cria um token JWT próprio para o backend
+        jwt.sign({ id: uid, email }, secret, {}, (err, serverToken) => {
+            if (err) throw err;
+
+            // Salva o token como um cookie com configurações de segurança
+            res.cookie('token', serverToken, {
+                httpOnly: true,  // Impede acesso ao cookie via JavaScript
+                secure: process.env.NODE_ENV === 'production', // Só permite cookies em conexões HTTPS
+                sameSite: 'Strict',  // Protege contra ataques CSRF
+            });
+
+            res.json({ id: uid, email });
+        });
     } catch (error) {
-        console.error("Erro no login:", error.message);
-        res.status(400).json(error.message);
+        console.error("Erro ao realizar login:", error);
+        res.status(401).json("Token inválido ou não autorizado");
     }
 });
 
-// Verificar Perfil
-app.get('/profile', async (req, res) => {
-    console.log("Requisição para verificar perfil recebida");
-    const { token } = req.cookies;
-    try {
-        const decodedToken = await firebaseAdmin.auth().verifyIdToken(token);
-        res.json(decodedToken);
-    } catch (error) {
-        console.error("Erro ao verificar perfil:", error.message);
-        res.status(401).json('Token inválido');
-    }
+// Endpoint de perfil
+app.get('/profile', verifyToken, (req, res) => {
+    res.json(req.user);
 });
 
-// Logout
+// Endpoint de logout
 app.post('/logout', (req, res) => {
-    console.log("Requisição de logout recebida");
-    res.cookie('token', '').json('Desconectado');
+    res.clearCookie('token', { httpOnly: true, secure: true, sameSite: 'Strict' });
+    res.json({ message: 'Logout realizado com sucesso' });
 });
 
-// Criar Post
-app.post('/post', uploadMiddleware.single('file'), async (req, res) => {
-    console.log("Requisição para criação de post recebida");
-    const { token } = req.cookies;
+// Endpoint para criar um post
+app.post('/post', verifyToken, uploadMiddleware.single('file'), async (req, res) => {
+    const { originalname, path } = req.file;
+    const parts = originalname.split('.');
+    const ext = parts[parts.length - 1];
+    const newPath = `${path}.${ext}`; // Renomeia a imagem
+    fs.renameSync(path, newPath); // Renomeia fisicamente o arquivo
+
+    const { title, summary, content } = req.body;
+    const user = req.user; // Dados do usuário autenticado
+
     try {
-        const decodedToken = await firebaseAdmin.auth().verifyIdToken(token);
-        const { title, summary, content } = req.body;
+        const postRef = await db.collection('posts').add({
+            title,
+            summary,
+            content,
+            cover: `${newPath.split('/').pop()}`, // Salva a imagem com o nome alterado
+            authorId: user.id,
+            authorEmail: user.email,
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        res.json({ id: postRef.id });
+    } catch (error) {
+        console.error("Erro ao criar post:", error);
+        res.status(500).json("Erro ao criar post");
+    }
+});
+
+// Endpoint para atualizar um post
+app.put('/post/:id', verifyToken, uploadMiddleware.single('file'), async (req, res) => {
+    const postId = req.params.id;
+    const { title, summary, content } = req.body;
+
+    let cover;
+    if (req.file) {
         const { originalname, path } = req.file;
-        const ext = originalname.split('.').pop();
-        const newPath = path + '.' + ext;
+        const parts = originalname.split('.');
+        const ext = parts[parts.length - 1];
+        const newPath = `${path}.${ext}`;
         fs.renameSync(path, newPath);
-
-        const postRef = db.collection('posts').doc();
-        await postRef.set({
-            title,
-            summary,
-            content,
-            cover: newPath,
-            author: decodedToken.uid,
-            createdAt: Timestamp.now(),
-        });
-        console.log(`Post criado com título: ${title}`);
-        res.json({ id: postRef.id, title, summary, content });
-    } catch (error) {
-        console.error("Erro ao criar post:", error.message);
-        res.status(400).json(error.message);
+        cover = newPath.split('/').pop();
     }
-});
 
-// Atualizar Post
-app.put('/post/:id', uploadMiddleware.single('file'), async (req, res) => {
-    console.log(`Requisição para atualização de post com ID: ${req.params.id} recebida`);
-    const { token } = req.cookies;
-    const { id } = req.params;
     try {
-        const decodedToken = await firebaseAdmin.auth().verifyIdToken(token);
-        const postRef = db.collection('posts').doc(id);
+        const postRef = db.collection('posts').doc(postId);
         const postDoc = await postRef.get();
-
         if (!postDoc.exists) {
-            console.log("Post não encontrado");
-            return res.status(404).json('Post não encontrado');
+            return res.status(404).json("Post não encontrado");
         }
-        if (postDoc.data().author !== decodedToken.uid) {
-            console.log("Permissão negada para atualizar o post");
-            return res.status(403).json('Permissão negada');
-        }
-
-        const { title, summary, content } = req.body;
-        let newPath = postDoc.data().cover;
-
-        if (req.file) {
-            const { originalname, path } = req.file;
-            const ext = originalname.split('.').pop();
-            newPath = path + '.' + ext;
-            fs.renameSync(path, newPath);
-        }
-
-        await postRef.update({
+        
+        const updatedData = {
             title,
             summary,
             content,
-            cover: newPath,
-        });
-        console.log(`Post atualizado com título: ${title}`);
-        res.json({ id, title, summary, content });
+            ...(cover && { cover }),
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        };
+
+        await postRef.update(updatedData);
+        res.json("Post atualizado com sucesso");
     } catch (error) {
-        console.error("Erro ao atualizar post:", error.message);
-        res.status(400).json(error.message);
+        console.error("Erro ao atualizar post:", error);
+        res.status(500).json("Erro ao atualizar post");
     }
 });
 
-// Listar Posts
-app.get('/post', async (req, res) => {
-    console.log("Requisição para listar posts recebida");
-    try {
-        const posts = await db.collection('posts').orderBy('createdAt', 'desc').limit(20).get();
-        const postList = posts.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        console.log(`Foram encontrados ${postList.length} posts`);
-        res.json(postList);
-    } catch (error) {
-        console.error("Erro ao listar posts:", error.message);
-        res.status(400).json(error.message);
-    }
-});
-
-// Visualizar Post Individual
+// Endpoint para excluir um post
 app.get('/post/:id', async (req, res) => {
-    console.log(`Requisição para visualizar post com ID: ${req.params.id} recebida`);
-    const { id } = req.params;
+    const postId = req.params.id;
+
     try {
-        const postDoc = await db.collection('posts').doc(id).get();
+        const postDoc = await db.collection('posts').doc(postId).get();
         if (!postDoc.exists) {
-            console.log("Post não encontrado");
-            return res.status(404).json('Post não encontrado');
+            return res.status(404).json("Post não encontrado");
         }
+        // Retorna o post com o id
         res.json({ id: postDoc.id, ...postDoc.data() });
     } catch (error) {
-        console.error("Erro ao visualizar post:", error.message);
-        res.status(400).json(error.message);
+        console.error("Erro ao obter post:", error);
+        res.status(500).json("Erro ao obter post");
     }
 });
 
-// Exclusão de Post
-app.delete('/post/:id', async (req, res) => {
-    console.log(`Requisição para exclusão de post com ID: ${req.params.id} recebida`);
-    const { token } = req.cookies;
-    const { id } = req.params;
+// Endpoint para obter lista de posts
+app.get('/post', async (req, res) => {
     try {
-        // Verificar o token de autenticação do usuário
-        const decodedToken = await firebaseAdmin.auth().verifyIdToken(token);
-        
-        const postRef = db.collection('posts').doc(id);
-        const postDoc = await postRef.get();
-
-        if (!postDoc.exists) {
-            console.log("Post não encontrado");
-            return res.status(404).json('Post não encontrado');
-        }
-
-        // Verificar se o usuário é o autor do post
-        if (postDoc.data().author !== decodedToken.uid) {
-            console.log("Permissão negada para excluir o post");
-            return res.status(403).json('Permissão negada');
-        }
-
-        // Excluir a imagem associada ao post (opcional)
-        const coverPath = postDoc.data().cover;
-        if (coverPath && fs.existsSync(coverPath)) {
-            fs.unlinkSync(coverPath);
-        }
-
-        // Excluir o documento do Firestore
-        await postRef.delete();
-        console.log(`Post com ID: ${id} excluído com sucesso`);
-        res.json({ message: 'Post excluído com sucesso' });
+        const snapshot = await db.collection('posts').orderBy('createdAt', 'desc').limit(20).get();
+        const posts = snapshot.docs.map(doc => {
+            const postData = { id: doc.id, ...doc.data() };
+            return postData;
+        });
+        res.json(posts);
     } catch (error) {
-        console.error("Erro ao excluir post:", error.message);
-        res.status(400).json(error.message);
+        console.error("Erro ao obter posts:", error);
+        res.status(500).json("Erro ao obter posts");
     }
 });
 
+// Endpoint para obter um post específico
+app.get('/post/:id', async (req, res) => {
+    const postId = req.params.id;
+
+    try {
+        const postDoc = await db.collection('posts').doc(postId).get();
+        if (!postDoc.exists) {
+            return res.status(404).json("Post não encontrado");
+        }
+        const postData = postDoc.data();
+        
+        // Certifique-se de que 'createdAt' seja formatado como string
+        postData.createdAt = postData.createdAt
+            ? postData.createdAt.toDate().toLocaleString('pt-BR', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: 'numeric',
+                timeZone: 'UTC'
+            })
+            : null;
+
+        res.json({ id: postDoc.id, ...postData });
+    } catch (error) {
+        console.error("Erro ao obter post:", error);
+        res.status(500).json("Erro ao obter post");
+    }
+});
+
+
+
+
+// Inicia o servidor
 app.listen(4000, () => {
     console.log("Servidor rodando na porta 4000");
 });

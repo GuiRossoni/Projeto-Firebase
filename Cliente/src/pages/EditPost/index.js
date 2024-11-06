@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
-import { Navigate, useParams, Link } from "react-router-dom";
+import {useEffect, useState} from "react";
+import {Navigate, useParams} from "react-router-dom";
 import Editor from "../../components/Editor";
 
 export default function EditPost() {
-  const { id } = useParams();
+  const {id} = useParams();
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
   const [content, setContent] = useState('');
@@ -12,13 +12,14 @@ export default function EditPost() {
 
   useEffect(() => {
     fetch('http://localhost:4000/post/' + id)
-      .then(response => response.json())
-      .then(postInfo => {
-        setTitle(postInfo.title);
-        setContent(postInfo.content);
-        setSummary(postInfo.summary);
+      .then(response => {
+        response.json().then(postInfo => {
+          setTitle(postInfo.title);
+          setContent(postInfo.content);
+          setSummary(postInfo.summary);
+        });
       });
-  }, [id]);
+  }, []);
 
   async function updatePost(ev) {
     ev.preventDefault();
@@ -28,9 +29,9 @@ export default function EditPost() {
     data.set('content', content);
     data.set('id', id);
     if (files?.[0]) {
-      data.set('file', files[0]);
+      data.set('file', files?.[0]);
     }
-    const response = await fetch('http://localhost:4000/post', {
+    const response = await fetch(`http://localhost:4000/post/${id}`, {
       method: 'PUT',
       body: data,
       credentials: 'include',
@@ -51,36 +52,30 @@ export default function EditPost() {
   }
 
   if (redirect) {
-    return <Navigate to={'/posts'} />;
+    return <Navigate to="/" />;
   }
 
   return (
     <form onSubmit={updatePost}>
       <input
         type="title"
-        placeholder="Title"
+        placeholder={'Título'}
         value={title}
-        onChange={(ev) => setTitle(ev.target.value)}
-      />
+        onChange={ev => setTitle(ev.target.value)} />
       <input
         type="summary"
-        placeholder="Summary"
+        placeholder={'Descrição'}
         value={summary}
-        onChange={(ev) => setSummary(ev.target.value)}
-      />
+        onChange={ev => setSummary(ev.target.value)} />
       <input
         type="file"
-        onChange={(ev) => setFiles(ev.target.files)}
-      />
+        onChange={ev => setFiles(ev.target.files)} />
       <Editor onChange={setContent} value={content} />
-      <button style={{ marginTop: '5px' }}>Update post</button>
+      <button style={{marginTop: '5px'}}>Atualizar Post</button>
       <button
         type="button"
-        style={{ marginTop: '5px', marginLeft: '5px', backgroundColor: 'red', color: 'white' }}
         onClick={deletePost}
-      >
-        Delete post
-      </button>
+        style={{marginTop: '5px', backgroundColor: 'red', color: 'white'}}>Deletar Post</button>
     </form>
   );
 }
