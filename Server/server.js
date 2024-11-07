@@ -133,7 +133,7 @@ app.post('/post', verifyToken, uploadMiddleware.single('file'), async (req, res)
             title,
             summary,
             content,
-            cover: `${newPath.split('/').pop()}`, // Salva a imagem com o nome alterado
+            cover: `uploads/${newPath.split('/').pop()}`, // Salva a imagem com o nome alterado
             authorId: user.id,
             authorEmail: user.email,
             createdAt: admin.firestore.FieldValue.serverTimestamp()
@@ -152,26 +152,31 @@ app.put('/post/:id', verifyToken, uploadMiddleware.single('file'), async (req, r
 
     let cover;
     if (req.file) {
+        // Processa o novo arquivo, se presente
         const { originalname, path } = req.file;
         const parts = originalname.split('.');
         const ext = parts[parts.length - 1];
         const newPath = `${path}.${ext}`;
         fs.renameSync(path, newPath);
-        cover = newPath.split('/').pop();
+        cover = `uploads/${newPath.split('/').pop()}`; // Inclui o caminho 'uploads/'
+    } else {
+        // Se não houver um novo arquivo, mantém o campo `cover` existente
+        const postDoc = await db.collection('posts').doc(postId).get();
+        if (postDoc.exists) {
+            cover = postDoc.data().cover; // Mantém o valor do campo cover original
+        } else {
+            return res.status(404).json("Post não encontrado");
+        }
     }
 
     try {
         const postRef = db.collection('posts').doc(postId);
-        const postDoc = await postRef.get();
-        if (!postDoc.exists) {
-            return res.status(404).json("Post não encontrado");
-        }
-        
+
         const updatedData = {
             title,
             summary,
             content,
-            ...(cover && { cover }),
+            cover, // Salva o campo cover com o caminho completo
             updatedAt: admin.firestore.FieldValue.serverTimestamp()
         };
 
@@ -182,6 +187,7 @@ app.put('/post/:id', verifyToken, uploadMiddleware.single('file'), async (req, r
         res.status(500).json("Erro ao atualizar post");
     }
 });
+
 
 // Endpoint para excluir um post
 app.delete('/post/:id', verifyToken, async (req, res) => {
