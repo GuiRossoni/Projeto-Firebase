@@ -9,7 +9,7 @@ const formatDate = (timestamp) => {
   if (timestamp && typeof timestamp === 'object' && '_seconds' in timestamp) {
     // Converte o timestamp Firestore para um objeto Date
     const date = new Date(timestamp._seconds * 1000);
-    return format(date, 'PPpp', { locale: ptBR });
+    return format(date, "dd 'de' MMM 'de' yyyy 'às' HH:mm", { locale: ptBR });
   }
   return 'Data indisponível';
 };
@@ -49,7 +49,6 @@ export default function PostPage() {
       <h1>{postInfo.title}</h1>
       <time>{formattedDate}</time>
       <div className="author">Criado por: {postInfo.authorEmail || 'Autor desconhecido'}</div>
-
       {userInfo && userInfo.id === postInfo.authorId && (
         <div className="edit-row">
           <Link className="edit-btn" to={`/edit/${postInfo.id}`}>
@@ -57,11 +56,9 @@ export default function PostPage() {
           </Link>
         </div>
       )}
-
       <div className="image">
         <img src={`http://localhost:4000/${postInfo.cover}`} alt="Post Cover" />
       </div>
-
       <div className="content" dangerouslySetInnerHTML={{ __html: postInfo.content }} />
     </div>
   );

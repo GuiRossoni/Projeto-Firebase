@@ -10,7 +10,7 @@ export default function Header() {
     })
       .then(response => response.ok ? response.json() : null)
       .then(userInfo => setUserInfo(userInfo));
-  }, []);
+  }, [setUserInfo]);
   
 
   function logout() {

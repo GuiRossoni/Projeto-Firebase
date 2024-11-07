@@ -184,6 +184,18 @@ app.put('/post/:id', verifyToken, uploadMiddleware.single('file'), async (req, r
 });
 
 // Endpoint para excluir um post
+app.delete('/post/:id', verifyToken, async (req, res) => {
+    const postId = req.params.id;
+    try {
+        await db.collection('posts').doc(postId).delete();
+        res.json({ message: 'Post deletado com sucesso' });
+    } catch (error) {
+        console.error("Erro ao deletar post:", error);
+        res.status(500).json("Erro ao deletar post");
+    }
+});
+
+// Endpoint para obter um post específico
 app.get('/post/:id', async (req, res) => {
     const postId = req.params.id;
 
@@ -192,8 +204,20 @@ app.get('/post/:id', async (req, res) => {
         if (!postDoc.exists) {
             return res.status(404).json("Post não encontrado");
         }
-        // Retorna o post com o id
-        res.json({ id: postDoc.id, ...postDoc.data() });
+        const postData = postDoc.data();
+        
+        postData.createdAt = postData.createdAt
+            ? postData.createdAt.toDate().toLocaleString('pt-BR', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: 'numeric',
+                minute: 'numeric',
+                timeZone: 'UTC'
+            })
+            : null;
+
+        res.json({ id: postDoc.id, ...postData });
     } catch (error) {
         console.error("Erro ao obter post:", error);
         res.status(500).json("Erro ao obter post");
@@ -214,39 +238,6 @@ app.get('/post', async (req, res) => {
         res.status(500).json("Erro ao obter posts");
     }
 });
-
-// Endpoint para obter um post específico
-app.get('/post/:id', async (req, res) => {
-    const postId = req.params.id;
-
-    try {
-        const postDoc = await db.collection('posts').doc(postId).get();
-        if (!postDoc.exists) {
-            return res.status(404).json("Post não encontrado");
-        }
-        const postData = postDoc.data();
-        
-        // Certifique-se de que 'createdAt' seja formatado como string
-        postData.createdAt = postData.createdAt
-            ? postData.createdAt.toDate().toLocaleString('pt-BR', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: 'numeric',
-                minute: 'numeric',
-                timeZone: 'UTC'
-            })
-            : null;
-
-        res.json({ id: postDoc.id, ...postData });
-    } catch (error) {
-        console.error("Erro ao obter post:", error);
-        res.status(500).json("Erro ao obter post");
-    }
-});
-
-
-
 
 // Inicia o servidor
 app.listen(4000, () => {

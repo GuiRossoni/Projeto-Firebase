@@ -6,10 +6,12 @@ a{
 }
 body{
     color: #222;
-    background-color: #f6f6f6;
+        background-color: #e2dee3;
 }
-img{
+img {
     max-width: 100%;
+    border: 2px solid #994cbd;
+    border-radius: 10px;
 }
 main{
     padding: 10px;
@@ -58,7 +60,7 @@ div.post div.texts a{
 }
 div.post p.info{
     margin:24px 0;
-    color: #888;
+    color: #777777;
     font-size:1rem;
     font-weight: bold;
     display: flex;
@@ -121,7 +123,7 @@ div.post-page time{
     text-align: center;
     display: block;
     font-size:1rem;
-    color:#aaa;
+    color:#777777;
     margin: 10px 0;
 }
 div.post-page div.author{
@@ -182,6 +184,12 @@ a svg{
 }
   
 .post .date {
-    color: gray;
+    color: rgb(102, 102, 102);
     font-size: 0.9em; /* Ajuste de estilo para diferenciar da linha do autor */
+}
+
+div.ql-editor {
+    background-color: white;
+    padding: 10px;
+    border-radius: 5px;
 }

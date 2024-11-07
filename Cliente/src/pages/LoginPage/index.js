@@ -4,7 +4,6 @@ import { UserContext } from "../../components/UserContext";
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 
-// Configuração do Firebase Client SDK
 const firebaseConfig = {
   apiKey: "AIzaSyBphsqxmIVvORxVw7QN3zbC92HEL_Zgm70",
   authDomain: "blog-notinhas-7c131.firebaseapp.com",

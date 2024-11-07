@@ -1,9 +1,9 @@
-import {useEffect, useState} from "react";
-import {Navigate, useParams} from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Navigate, useParams } from "react-router-dom";
 import Editor from "../../components/Editor";
 
 export default function EditPost() {
-  const {id} = useParams();
+  const { id } = useParams();
   const [title, setTitle] = useState('');
   const [summary, setSummary] = useState('');
   const [content, setContent] = useState('');
@@ -11,15 +11,14 @@ export default function EditPost() {
   const [redirect, setRedirect] = useState(false);
 
   useEffect(() => {
-    fetch('http://localhost:4000/post/' + id)
-      .then(response => {
-        response.json().then(postInfo => {
-          setTitle(postInfo.title);
-          setContent(postInfo.content);
-          setSummary(postInfo.summary);
-        });
+    fetch(`http://localhost:4000/post/${id}`)
+      .then(response => response.json())
+      .then(postInfo => {
+        setTitle(postInfo.title);
+        setContent(postInfo.content);
+        setSummary(postInfo.summary);
       });
-  }, []);
+  }, [id]);
 
   async function updatePost(ev) {
     ev.preventDefault();
@@ -27,7 +26,6 @@ export default function EditPost() {
     data.set('title', title);
     data.set('summary', summary);
     data.set('content', content);
-    data.set('id', id);
     if (files?.[0]) {
       data.set('file', files?.[0]);
     }
@@ -48,6 +46,8 @@ export default function EditPost() {
     });
     if (response.ok) {
       setRedirect(true);
+    } else {
+      console.error("Erro ao deletar post:", await response.json());
     }
   }
 
@@ -71,11 +71,13 @@ export default function EditPost() {
         type="file"
         onChange={ev => setFiles(ev.target.files)} />
       <Editor onChange={setContent} value={content} />
-      <button style={{marginTop: '5px'}}>Atualizar Post</button>
+      <button style={{ marginTop: '5px' }}>Atualizar Post</button>
       <button
         type="button"
         onClick={deletePost}
-        style={{marginTop: '5px', backgroundColor: 'red', color: 'white'}}>Deletar Post</button>
+        style={{ marginTop: '5px', backgroundColor: 'red', color: 'white' }}>
+        Deletar Post
+      </button>
     </form>
   );
 }
