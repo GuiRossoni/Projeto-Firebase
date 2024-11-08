@@ -113,7 +113,7 @@ export default function PostPage() {
         {comments.length > 0 ? (
           comments.map((comment) => (
             <div key={comment.id} className="comment">
-              <span className="author">Comentário de: {comment.authorEmail || "Anônimo"}</span>
+              <span className="author">{comment.authorEmail || "Anônimo"}</span>
               <p>{comment.content}</p>
               {userInfo && userInfo.id === comment.authorId && (
                 <button onClick={() => handleDeleteComment(comment.id)}>Excluir</button>
