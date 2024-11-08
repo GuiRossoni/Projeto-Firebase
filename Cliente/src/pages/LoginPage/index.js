@@ -33,7 +33,7 @@ export default function LoginPage() {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}` // Envia o token no cabeçalho
+          'Authorization': `Bearer ${token}`
         },
         credentials: 'include',
       });

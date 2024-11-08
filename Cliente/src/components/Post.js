@@ -2,13 +2,11 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Link } from "react-router-dom";
 
-export default function Post({ id, title, summary, cover, content, createdAt, authorEmail }) {
-  // Converta createdAt para uma data JavaScript, se for um timestamp do Firestore
+export default function Post({ id, title, summary, cover, createdAt, authorEmail }) {
   const createdAtDate = createdAt && createdAt._seconds
     ? new Date(createdAt._seconds * 1000)
     : null;
 
-  // Formate a data ou defina como "Data indisponível" caso não seja válida
   const formattedDate = createdAtDate 
     ? format(createdAtDate, "dd 'de' MMM 'de' yyyy 'às' HH:mm", { locale: ptBR })
     : "Data indisponível";

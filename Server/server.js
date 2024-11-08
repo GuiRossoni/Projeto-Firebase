@@ -7,7 +7,6 @@ const multer = require('multer');
 const uploadMiddleware = multer({ dest: 'uploads/' });
 const fs = require('fs');
 const admin = require('firebase-admin');
-const { getAuth } = require('firebase-admin/auth');
 
 // Inicializa o Express
 const app = express();

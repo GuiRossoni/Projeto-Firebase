@@ -1,15 +1,22 @@
 import { useContext, useEffect, useState } from "react";
-import { useParams, Link, /*useNavigate*/ } from "react-router-dom";
+import { useParams, Link} from "react-router-dom";
 import { format } from "date-fns";
-import ptBR from "date-fns/locale/pt-BR";
+import { ptBR } from "date-fns/locale/";
 import { UserContext } from "../../components/UserContext";
 
 const formatDate = (timestamp) => {
-  if (timestamp && typeof timestamp === 'object' && '_seconds' in timestamp) {
-    const date = new Date(timestamp._seconds * 1000);
-    return format(date, "dd 'de' MMM 'de' yyyy 'às' HH:mm", { locale: ptBR });
+  try {
+    if (timestamp && typeof timestamp === 'object' && '_seconds' in timestamp) {
+      const date = new Date(timestamp._seconds * 1000);
+      return format(date, "dd 'de' MMM 'de' yyyy 'às' HH:mm", { locale: ptBR });
+    } else if (typeof timestamp === 'string') {
+      return timestamp;
+    }
+    return 'Data indisponível';
+  } catch (error) {
+    console.error("Erro ao formatar data:", error);
+    return 'Data inválida';
   }
-  return 'Data indisponível';
 };
 
 export default function PostPage() {
@@ -19,7 +26,6 @@ export default function PostPage() {
   const [error, setError] = useState(null);
   const { userInfo } = useContext(UserContext);
   const { id } = useParams();
-  /*const navigate = useNavigate();*/
 
   useEffect(() => {
     fetch(`http://localhost:4000/post/${id}`)
@@ -48,7 +54,6 @@ export default function PostPage() {
       });
   
       if (response.ok) {
-        // Recarrega os comentários para atualizar o autor do novo comentário
         const updatedComments = await fetch(`http://localhost:4000/post/${id}/comments`)
           .then(res => res.json());
         
@@ -62,7 +67,6 @@ export default function PostPage() {
     }
   };
   
-
   const handleDeleteComment = async (commentId) => {
     try {
       const response = await fetch(`http://localhost:4000/post/${id}/comments/${commentId}`, {

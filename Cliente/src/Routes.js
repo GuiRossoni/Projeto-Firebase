@@ -7,7 +7,7 @@ import CreatePost from "./pages/CreatePost/index";
 import PostPage from "./pages/PostPage/index";
 import EditPost from "./pages/EditPost/index";
 import Error from "./pages/Error/index";
-import PrivateRoute from "./components/ProtectedRoute"; // importe o componente PrivateRoute
+import PrivateRoute from "./components/ProtectedRoute";
 
 const routes = (
     <Route path="/" element={<Layout />}>

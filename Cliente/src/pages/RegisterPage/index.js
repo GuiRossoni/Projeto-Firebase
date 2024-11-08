@@ -4,12 +4,11 @@ import { useNavigate } from "react-router-dom";
 export default function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const navigate = useNavigate(); // Hook para navegação
+  const navigate = useNavigate();
   
   async function register(ev) {
     ev.preventDefault();
     
-    // Verifique se a senha possui pelo menos 6 caracteres
     if (password.length < 6) {
       alert('A senha deve ter no mínimo 6 caracteres.');
       return;
@@ -23,7 +22,7 @@ export default function RegisterPage() {
     
     if (response.ok) {
       alert('Usuário registrado!');
-      navigate('/login'); // Redireciona para a página de login
+      navigate('/login');
     } else {
       alert('Falha no registro');
     }
