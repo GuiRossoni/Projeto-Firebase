@@ -1,4 +1,3 @@
-// Erro.js
 import React, { useState, useEffect } from 'react';
 import { Box, Typography } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
