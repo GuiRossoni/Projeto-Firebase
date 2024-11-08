@@ -245,6 +245,66 @@ app.get('/post', async (req, res) => {
     }
 });
 
+// Endpoint para obter os comentários de um post específico
+app.get('/post/:id/comments', async (req, res) => {
+    const postId = req.params.id;
+    try {
+        const commentsSnapshot = await db.collection('posts').doc(postId).collection('comments').orderBy('createdAt').get();
+        const comments = commentsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        res.json(comments);
+    } catch (error) {
+        console.error("Erro ao obter comentários:", error);
+        res.status(500).json("Erro ao obter comentários");
+    }
+});
+
+// Endpoint para adicionar um comentário a um post
+app.post('/post/:id/comments', verifyToken, async (req, res) => {
+    const postId = req.params.id;
+    const { content } = req.body;
+    const user = req.user;
+
+    try {
+        await db.collection('posts').doc(postId).collection('comments').add({
+            content,
+            authorId: user.id,
+            authorEmail: user.email,
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        res.json("Comentário adicionado com sucesso");
+    } catch (error) {
+        console.error("Erro ao adicionar comentário:", error);
+        res.status(500).json("Erro ao adicionar comentário");
+    }
+});
+
+// Endpoint para excluir um comentário
+app.delete('/post/:postId/comments/:commentId', verifyToken, async (req, res) => {
+    const { postId, commentId } = req.params;
+
+    try {
+        const commentRef = db.collection('posts').doc(postId).collection('comments').doc(commentId);
+        const commentDoc = await commentRef.get();
+    
+        if (!commentDoc.exists) {
+            return res.status(404).json({ error: "Comentário não encontrado" });
+        }
+    
+        // Verifica se o usuário autenticado é o autor do comentário
+        if (commentDoc.data().authorId !== req.user.id) {
+            return res.status(403).json({ error: "Você não tem permissão para excluir este comentário" });
+        }
+    
+        await commentRef.delete();
+        res.json({ message: "Comentário excluído com sucesso" });
+    } catch (error) {
+        console.error("Erro ao excluir comentário:", error);
+        res.status(500).json({ error: "Erro ao excluir comentário" });
+    }    
+});
+
+
+
 // Inicia o servidor
 app.listen(4000, () => {
     console.log("Servidor rodando na porta 4000");
